@@ -1,9 +1,46 @@
-using System.Text.Json;
-namespace BookReport.Component;
-public partial class BookReportControl : UserControl
+using Books.Component;
+
+namespace BookReport.Component
 {
-    private List<Book> _books=new();
-    public BookReportControl(){InitializeComponent();LoadData();}
-    private void LoadData(){var dir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Lab2LibraryVariant4");var bp=Path.Combine(dir,"books.json");var gp=Path.Combine(dir,"genres.txt");if(File.Exists(bp))_books=JsonSerializer.Deserialize<List<Book>>(File.ReadAllText(bp))??new();if(File.Exists(gp))comboGenre.Items.AddRange(File.ReadAllLines(gp).Where(x=>!string.IsNullOrWhiteSpace(x)).Distinct().Cast<object>().ToArray());}
-    private void Build_Click(object? s, EventArgs e){if(comboGenre.SelectedItem==null){MessageBox.Show("Выберите жанр.");return;}var g=comboGenre.SelectedItem.ToString()!;dataGridView1.DataSource=null;dataGridView1.DataSource=_books.Where(x=>x.Genre==g).ToList();}
+    public partial class BookReportControl : UserControl
+    {
+        public BookReportControl()
+        {
+            InitializeComponent();
+            LoadGenres();
+        }
+
+        private void LoadGenres()
+        {
+            comboGenre.Items.Clear();
+            foreach (var genre in BookRepository.LoadGenres()) comboGenre.Items.Add(genre);
+            if (comboGenre.Items.Count > 0) comboGenre.SelectedIndex = 0;
+        }
+
+        private void Build_Click(object? sender, EventArgs e)
+        {
+            if (comboGenre.SelectedItem == null)
+            {
+                MessageBox.Show("Выберите жанр.");
+                return;
+            }
+
+            var genre = comboGenre.SelectedItem.ToString();
+
+            var books = BookRepository.Load()
+                .Where(x => x.Genre == genre)
+                .Select(x => new
+                {
+                    x.Id,
+                    Название = x.Title,
+                    Описание = x.Description,
+                    Жанр = x.Genre,
+                    Стоимость = x.Price == 0 ? "Бесплатно" : $"{x.Price:0.00} руб."
+                })
+                .ToList();
+
+            dataGridView1.DataSource = null;
+            dataGridView1.DataSource = books;
+        }
+    }
 }
