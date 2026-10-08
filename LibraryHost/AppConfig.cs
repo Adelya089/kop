@@ -1,20 +1,23 @@
 using System.Text.Json;
 
-namespace LibraryHost;
-
-public sealed class AppConfig
+namespace LibraryHost
 {
-    public string PluginDirectory { get; set; } = "Plugins";
-    public string LicenseFile { get; set; } = "License/license.lic";
-
-    public static AppConfig Load()
+    public class AppConfig
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        public string PluginDirectory { get; set; } = "Plugins";
+        public string ReportPluginDirectory { get; set; } = "ReportPlugins";
+        public string LicenseFile { get; set; } = "License/license.lic";
 
-        if (!File.Exists(path))
-            return new AppConfig();
+        public static AppConfig Load()
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
 
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
+            if (!File.Exists(path))
+                return new AppConfig();
+
+            var json = File.ReadAllText(path);
+
+            return JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
+        }
     }
 }

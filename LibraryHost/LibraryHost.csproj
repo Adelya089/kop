@@ -13,7 +13,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Books.Component\Books.Component.csproj" />
 		<ProjectReference Include="..\ComponentContracts\ComponentContracts.csproj" />
+		<ProjectReference Include="..\PluginsContracts\PluginsContracts.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
