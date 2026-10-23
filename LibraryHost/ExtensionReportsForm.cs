@@ -10,22 +10,17 @@ public partial class ExtensionReportsForm : Form
     private readonly List<IReportDocumentWithChartPieContract> _piePlugins;
     private readonly List<IReportDocumentWithTableColumnRowHeaderContract> _tablePlugins;
 
-    // Плагины линейной диаграммы
     private readonly List<IReportDocumentWithChartLineContract> _linePlugins;
 
     public ExtensionReportsForm(string pluginDirectory)
     {
         InitializeComponent();
 
-        // Загружаем плагины трех уже существующих отчетов
         _textPlugins = ReportPluginLoader.Load<IReportDocumentWithContextTextsContract>(pluginDirectory);
         _piePlugins = ReportPluginLoader.Load<IReportDocumentWithChartPieContract>(pluginDirectory);
         _tablePlugins = ReportPluginLoader.Load<IReportDocumentWithTableColumnRowHeaderContract>(pluginDirectory);
-
-        // Загружаем LineExcel.Plugin по его контракту
         _linePlugins = ReportPluginLoader.Load<IReportDocumentWithChartLineContract>(pluginDirectory);
 
-        // Заполняем ComboBox форматами найденных плагинов
         FillCombo(comboText, _textPlugins);
         FillCombo(comboPie, _piePlugins);
         FillCombo(comboTable, _tablePlugins);
@@ -43,8 +38,6 @@ public partial class ExtensionReportsForm : Form
             combo.SelectedIndex = 0;
     }
 
-    // ОТЧЕТ 1
-    // Бесплатные книги: название + описание
     private async void ButtonText_Click(object? sender, EventArgs e)
     {
         if (comboText.SelectedIndex < 0)
@@ -84,9 +77,6 @@ public partial class ExtensionReportsForm : Form
         MessageBox.Show("Отчет сформирован.");
     }
 
-    // ОТЧЕТ 2
-    // Круговая диаграмма:
-    // сколько бесплатных книг каждого жанра
     private async void ButtonPie_Click(object? sender, EventArgs e)
     {
         if (comboPie.SelectedIndex < 0)
@@ -128,8 +118,6 @@ public partial class ExtensionReportsForm : Form
         MessageBox.Show("Отчет сформирован.");
     }
 
-    // ОТЧЕТ 3
-    // Word по всем книгам
     private async void ButtonTable_Click(object? sender, EventArgs e)
     {
         if (comboTable.SelectedIndex < 0)
@@ -189,10 +177,6 @@ public partial class ExtensionReportsForm : Form
         MessageBox.Show("Отчет сформирован.");
     }
 
-    // ОТЧЕТ 4
-    // Демонстрация собственного LineExcel.Plugin
-    // X = ID книги
-    // Y = стоимость книги
     private async void ButtonLine_Click(object? sender, EventArgs e)
     {
         if (comboLine.SelectedIndex < 0)
@@ -201,7 +185,6 @@ public partial class ExtensionReportsForm : Form
             return;
         }
 
-        // Получаем все книги
         var books = BookRepository.Load()
             .OrderBy(x => x.Id)
             .ToList();
@@ -212,12 +195,6 @@ public partial class ExtensionReportsForm : Form
             return;
         }
 
-        // Контракт линейной диаграммы требует:
-        // Dictionary<string,List<(int Parameter,double Value)>>
-        //
-        // Название серии = "Стоимость"
-        // Parameter = ID книги
-        // Value = стоимость книги
         var series = new Dictionary<string, List<(int Parameter, double Value)>>
         {
             ["Стоимость"] = books
@@ -227,10 +204,8 @@ public partial class ExtensionReportsForm : Form
                 .ToList()
         };
 
-        // Берем выбранную реализацию LineExcel.Plugin
         var plugin = _linePlugins[comboLine.SelectedIndex];
 
-        // Плагин имеет DocumentFormat = xlsx
         var path = SelectFile(
             plugin.DocumentFormat,
             "Линейная диаграмма стоимости книг");
@@ -238,7 +213,6 @@ public partial class ExtensionReportsForm : Form
         if (path == null)
             return;
 
-        // Передаем данные в LineExcel.Plugin
         await plugin.CreateDocumentAsync(
             path,
             "Стоимость книг",
@@ -248,7 +222,6 @@ public partial class ExtensionReportsForm : Form
         MessageBox.Show("Линейная диаграмма сформирована.");
     }
 
-    // Общее окно выбора места сохранения
     private static string? SelectFile(string format, string defaultName)
     {
         var extension = format.ToLowerInvariant() switch
