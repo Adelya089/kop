@@ -36,7 +36,7 @@ public sealed class LineExcelReportPlugin : IReportDocumentWithChartLineContract
             sheet.Cells[1, 1].Style.Font.Bold = true;
             sheet.Cells[1, 1].Style.Font.Size = 14;
 
-            sheet.Cells[3, 1].Value = "Параметр";
+            sheet.Cells[3, 1].Value = "ID книги";
             for (var i = 0; i < parameters.Count; i++)
                 sheet.Cells[i + 4, 1].Value = parameters[i];
 

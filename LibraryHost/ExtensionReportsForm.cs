@@ -10,22 +10,32 @@ public partial class ExtensionReportsForm : Form
     private readonly List<IReportDocumentWithChartPieContract> _piePlugins;
     private readonly List<IReportDocumentWithTableColumnRowHeaderContract> _tablePlugins;
 
+    // Плагины линейной диаграммы
+    private readonly List<IReportDocumentWithChartLineContract> _linePlugins;
+
     public ExtensionReportsForm(string pluginDirectory)
     {
         InitializeComponent();
 
+        // Загружаем плагины трех уже существующих отчетов
         _textPlugins = ReportPluginLoader.Load<IReportDocumentWithContextTextsContract>(pluginDirectory);
         _piePlugins = ReportPluginLoader.Load<IReportDocumentWithChartPieContract>(pluginDirectory);
         _tablePlugins = ReportPluginLoader.Load<IReportDocumentWithTableColumnRowHeaderContract>(pluginDirectory);
 
+        // Загружаем LineExcel.Plugin по его контракту
+        _linePlugins = ReportPluginLoader.Load<IReportDocumentWithChartLineContract>(pluginDirectory);
+
+        // Заполняем ComboBox форматами найденных плагинов
         FillCombo(comboText, _textPlugins);
         FillCombo(comboPie, _piePlugins);
         FillCombo(comboTable, _tablePlugins);
+        FillCombo(comboLine, _linePlugins);
     }
 
     private static void FillCombo<T>(ComboBox combo, List<T> plugins) where T : IReportDocumentContract
     {
         combo.Items.Clear();
+
         foreach (var plugin in plugins)
             combo.Items.Add(plugin.DocumentFormat);
 
@@ -33,6 +43,8 @@ public partial class ExtensionReportsForm : Form
             combo.SelectedIndex = 0;
     }
 
+    // ОТЧЕТ 1
+    // Бесплатные книги: название + описание
     private async void ButtonText_Click(object? sender, EventArgs e)
     {
         if (comboText.SelectedIndex < 0)
@@ -41,7 +53,10 @@ public partial class ExtensionReportsForm : Form
             return;
         }
 
-        var books = BookRepository.Load().Where(x => x.Price == 0).ToList();
+        var books = BookRepository.Load()
+            .Where(x => x.Price == 0)
+            .ToList();
+
         if (books.Count == 0)
         {
             MessageBox.Show("Нет бесплатных книг для отчета.");
@@ -49,17 +64,29 @@ public partial class ExtensionReportsForm : Form
         }
 
         var plugin = _textPlugins[comboText.SelectedIndex];
-        var path = SelectFile(plugin.DocumentFormat, "Бесплатные книги");
-        if (path == null) return;
+
+        var path = SelectFile(
+            plugin.DocumentFormat,
+            "Бесплатные книги");
+
+        if (path == null)
+            return;
 
         var paragraphs = books
             .Select(x => $"{x.Title}. {x.Description}")
             .ToList();
 
-        await plugin.CreateDocumentAsync(path, "Бесплатные книги", paragraphs);
+        await plugin.CreateDocumentAsync(
+            path,
+            "Бесплатные книги",
+            paragraphs);
+
         MessageBox.Show("Отчет сформирован.");
     }
 
+    // ОТЧЕТ 2
+    // Круговая диаграмма:
+    // сколько бесплатных книг каждого жанра
     private async void ButtonPie_Click(object? sender, EventArgs e)
     {
         if (comboPie.SelectedIndex < 0)
@@ -71,7 +98,9 @@ public partial class ExtensionReportsForm : Form
         var data = BookRepository.Load()
             .Where(x => x.Price == 0)
             .GroupBy(x => x.Genre)
-            .Select(x => (Parameter: x.Key, Value: (double)x.Count()))
+            .Select(x => (
+                Parameter: x.Key,
+                Value: (double)x.Count()))
             .ToList();
 
         if (data.Count == 0)
@@ -81,8 +110,13 @@ public partial class ExtensionReportsForm : Form
         }
 
         var plugin = _piePlugins[comboPie.SelectedIndex];
-        var path = SelectFile(plugin.DocumentFormat, "Бесплатные книги по жанрам");
-        if (path == null) return;
+
+        var path = SelectFile(
+            plugin.DocumentFormat,
+            "Бесплатные книги по жанрам");
+
+        if (path == null)
+            return;
 
         await plugin.CreateDocumentAsync(
             path,
@@ -94,6 +128,8 @@ public partial class ExtensionReportsForm : Form
         MessageBox.Show("Отчет сформирован.");
     }
 
+    // ОТЧЕТ 3
+    // Word по всем книгам
     private async void ButtonTable_Click(object? sender, EventArgs e)
     {
         if (comboTable.SelectedIndex < 0)
@@ -103,6 +139,7 @@ public partial class ExtensionReportsForm : Form
         }
 
         var books = BookRepository.Load();
+
         if (books.Count == 0)
         {
             MessageBox.Show("Нет книг для отчета.");
@@ -114,17 +151,30 @@ public partial class ExtensionReportsForm : Form
             Id = x.Id,
             Title = x.Title,
             Genre = x.Genre,
-            PriceText = x.Price == 0 ? "бесплатная" : $"{x.Price:0.00} руб."
+            PriceText = x.Price == 0
+                ? "бесплатная"
+                : $"{x.Price:0.00} руб."
         }).ToList();
 
         var plugin = _tablePlugins[comboTable.SelectedIndex];
-        var path = SelectFile(plugin.DocumentFormat, "Все книги");
-        if (path == null) return;
+
+        var path = SelectFile(
+            plugin.DocumentFormat,
+            "Все книги");
+
+        if (path == null)
+            return;
 
         await plugin.CreateDocumentAsync(
             path,
             "Информация по всем книгам",
-            new List<int> { 1200, 3000, 2200, 2200 },
+            new List<int>
+            {
+                1200,
+                3000,
+                2200,
+                2200
+            },
             Enumerable.Repeat(500, data.Count + 1).ToList(),
             true,
             new List<(string Header, string PropertyName, string FiledName)>
@@ -139,6 +189,66 @@ public partial class ExtensionReportsForm : Form
         MessageBox.Show("Отчет сформирован.");
     }
 
+    // ОТЧЕТ 4
+    // Демонстрация собственного LineExcel.Plugin
+    // X = ID книги
+    // Y = стоимость книги
+    private async void ButtonLine_Click(object? sender, EventArgs e)
+    {
+        if (comboLine.SelectedIndex < 0)
+        {
+            MessageBox.Show("Не найден плагин для линейной диаграммы.");
+            return;
+        }
+
+        // Получаем все книги
+        var books = BookRepository.Load()
+            .OrderBy(x => x.Id)
+            .ToList();
+
+        if (books.Count == 0)
+        {
+            MessageBox.Show("Нет книг для диаграммы.");
+            return;
+        }
+
+        // Контракт линейной диаграммы требует:
+        // Dictionary<string,List<(int Parameter,double Value)>>
+        //
+        // Название серии = "Стоимость"
+        // Parameter = ID книги
+        // Value = стоимость книги
+        var series = new Dictionary<string, List<(int Parameter, double Value)>>
+        {
+            ["Стоимость"] = books
+                .Select(x => (
+                    Parameter: x.Id,
+                    Value: (double)x.Price))
+                .ToList()
+        };
+
+        // Берем выбранную реализацию LineExcel.Plugin
+        var plugin = _linePlugins[comboLine.SelectedIndex];
+
+        // Плагин имеет DocumentFormat = xlsx
+        var path = SelectFile(
+            plugin.DocumentFormat,
+            "Линейная диаграмма стоимости книг");
+
+        if (path == null)
+            return;
+
+        // Передаем данные в LineExcel.Plugin
+        await plugin.CreateDocumentAsync(
+            path,
+            "Стоимость книг",
+            "Стоимость книг по идентификаторам",
+            series);
+
+        MessageBox.Show("Линейная диаграмма сформирована.");
+    }
+
+    // Общее окно выбора места сохранения
     private static string? SelectFile(string format, string defaultName)
     {
         var extension = format.ToLowerInvariant() switch
@@ -165,6 +275,8 @@ public partial class ExtensionReportsForm : Form
             FileName = defaultName
         };
 
-        return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : null;
+        return dialog.ShowDialog() == DialogResult.OK
+            ? dialog.FileName
+            : null;
     }
 }
