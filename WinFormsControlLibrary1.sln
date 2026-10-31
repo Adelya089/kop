@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PiePdf.Plugin", "PiePdf.Plu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TableWord.Plugin", "TableWord.Plugin\TableWord.Plugin.csproj", "{99B30BF6-ED1C-4371-A2ED-CFA3F0CD2E2C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Genres.Microservice", "Genres.Microservice\Genres.Microservice.csproj", "{E9C4C5ED-F53C-410E-8A64-89E758F5DACD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,10 @@ Global
 		{99B30BF6-ED1C-4371-A2ED-CFA3F0CD2E2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{99B30BF6-ED1C-4371-A2ED-CFA3F0CD2E2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{99B30BF6-ED1C-4371-A2ED-CFA3F0CD2E2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9C4C5ED-F53C-410E-8A64-89E758F5DACD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9C4C5ED-F53C-410E-8A64-89E758F5DACD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9C4C5ED-F53C-410E-8A64-89E758F5DACD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9C4C5ED-F53C-410E-8A64-89E758F5DACD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
