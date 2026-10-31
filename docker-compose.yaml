@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: librarydb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d librarydb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - library-net
+
+  genres:
+    build: ./Genres.Microservice
+    environment:
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=librarydb;Username=postgres;Password=postgres
+    ports:
+      - "7099:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - library-net
+
+  books:
+    build: ./Books.Microservice
+    environment:
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=librarydb;Username=postgres;Password=postgres
+      GenresServiceUrl: http://genres:8080/
+    ports:
+      - "7100:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      genres:
+        condition: service_started
+    networks:
+      - library-net
+
+volumes:
+  pgdata:
+networks:
+  library-net:
+    driver: bridge

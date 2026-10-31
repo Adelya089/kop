@@ -1,79 +1,64 @@
 using Microsoft.AspNetCore.Mvc;
-
+using Npgsql;
 namespace Genres.Microservice.Controllers;
-
 [ApiController]
 [Route("genres")]
-public class GenresController : ControllerBase
+public sealed class GenresController(GenreDatabase database) : ControllerBase
 {
-    private static readonly object Sync = new();
-    private static readonly string FilePath = Path.Combine(
-        AppContext.BaseDirectory, "data", "genres.txt");
-
-    public record GenreRequest(string Name);
-
-    private static List<string> Load()
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        if (!System.IO.File.Exists(FilePath))
-            System.IO.File.WriteAllLines(FilePath, ["Фантастика", "Детектив", "Роман"]);
-
-        return System.IO.File.ReadAllLines(FilePath)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct()
-            .ToList();
-    }
-
-    private static void Save(IEnumerable<string> genres) =>
-        System.IO.File.WriteAllLines(FilePath, genres);
-
+    public sealed record GenreRequest(string? Name);
     [HttpGet]
-    public ActionResult<List<string>> Get()
+    public async Task<ActionResult<List<string>>> Get()
     {
-        lock (Sync) return Ok(Load());
+        var result = new List<string>();
+        await using var connection = await database.OpenAsync();
+        await using var command = new NpgsqlCommand("SELECT name FROM genres ORDER BY name", connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync()) result.Add(reader.GetString(0));
+        return Ok(result);
     }
-
     [HttpPost]
-    public IActionResult Post([FromBody] GenreRequest request)
+    public async Task<IActionResult> Post([FromBody] GenreRequest request)
     {
         var name = request.Name?.Trim();
-        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Название жанра не может быть пустым.");
-        lock (Sync)
-        {
-            var genres = Load();
-            if (genres.Contains(name)) return Conflict("Такой жанр уже существует.");
-            genres.Add(name);
-            Save(genres);
-        }
-        return StatusCode(StatusCodes.Status201Created, name);
+        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Название жанра обязательно.");
+        await using var connection = await database.OpenAsync();
+        await using var command = new NpgsqlCommand("INSERT INTO genres(name) VALUES (@name) ON CONFLICT DO NOTHING", connection);
+        command.Parameters.AddWithValue("name", name);
+        if (await command.ExecuteNonQueryAsync() == 0) return Conflict("Такой жанр уже существует.");
+        return StatusCode(201, name);
     }
-
     [HttpPut("{name}")]
-    public IActionResult Put(string name, [FromBody] GenreRequest request)
+    public async Task<IActionResult> Put(string name, [FromBody] GenreRequest request)
     {
         var newName = request.Name?.Trim();
-        if (string.IsNullOrWhiteSpace(newName)) return BadRequest("Название жанра не может быть пустым.");
-        lock (Sync)
+        if (string.IsNullOrWhiteSpace(newName)) return BadRequest("Название жанра обязательно.");
+        await using var connection = await database.OpenAsync();
+        await using var command = new NpgsqlCommand("UPDATE genres SET name=@newName WHERE name=@name", connection);
+        command.Parameters.AddWithValue("newName", newName);
+        command.Parameters.AddWithValue("name", name);
+        try
         {
-            var genres = Load();
-            var index = genres.IndexOf(name);
-            if (index == -1) return NotFound("Жанр не найден.");
-            if (newName != name && genres.Contains(newName)) return Conflict("Такой жанр уже существует.");
-            genres[index] = newName;
-            Save(genres);
+            if (await command.ExecuteNonQueryAsync() == 0)
+            {
+                await using var check = new NpgsqlCommand("SELECT EXISTS(SELECT 1 FROM genres WHERE name=@name)", connection);
+                check.Parameters.AddWithValue("name", name);
+                return (bool)(await check.ExecuteScalarAsync() ?? false)
+                    ? Conflict("Жанр используется книгами и не может быть переименован.") : NotFound();
+            }
         }
+        catch (PostgresException ex) when (ex.SqlState is "23505" or "23503") { return Conflict("Название занято или жанр используется книгами."); }
         return NoContent();
     }
-
     [HttpDelete("{name}")]
-    public IActionResult Delete(string name)
+    public async Task<IActionResult> Delete(string name)
     {
-        lock (Sync)
-        {
-            var genres = Load();
-            if (!genres.Remove(name)) return NotFound("Жанр не найден.");
-            Save(genres);
-        }
-        return NoContent();
+        await using var connection = await database.OpenAsync();
+        await using var command = new NpgsqlCommand("DELETE FROM genres WHERE name=@name", connection);
+        command.Parameters.AddWithValue("name", name);
+        try { if (await command.ExecuteNonQueryAsync() == 1) return NoContent(); }
+        catch (PostgresException ex) when (ex.SqlState == "23503") { return Conflict("Жанр используется книгами."); }
+        await using var check = new NpgsqlCommand("SELECT EXISTS(SELECT 1 FROM genres WHERE name=@name)", connection);
+        check.Parameters.AddWithValue("name", name);
+        return (bool)(await check.ExecuteScalarAsync() ?? false) ? Conflict("Жанр используется книгами.") : NotFound();
     }
 }
