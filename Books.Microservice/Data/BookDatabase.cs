@@ -1,20 +1,27 @@
 using Npgsql;
+
 namespace Books.Microservice.Data;
+
 public sealed record Book(int Id, string Title, string Description, string Genre, decimal? Price);
+
 public sealed record BookRequest(string? Title, string? Description, string? Genre, decimal? Price);
+
 public sealed class BookDatabase(IConfiguration config)
 {
     private readonly string _connection = config.GetConnectionString("Default")
         ?? throw new InvalidOperationException("Не задана строка подключения к БД.");
+
     public async Task<NpgsqlConnection> OpenAsync()
     {
         var connection = new NpgsqlConnection(_connection);
         await connection.OpenAsync();
         return connection;
     }
+
     public async Task InitializeAsync()
     {
         await using var connection = await OpenAsync();
+
         await using var command = new NpgsqlCommand("""
             CREATE TABLE IF NOT EXISTS genres (name TEXT PRIMARY KEY);
             CREATE TABLE IF NOT EXISTS books (
@@ -25,17 +32,30 @@ public sealed class BookDatabase(IConfiguration config)
                 price NUMERIC(12,2) NULL CHECK (price IS NULL OR price >= 0)
             )
             """, connection);
+
         await command.ExecuteNonQueryAsync();
     }
+
     public async Task<List<Book>> AllAsync()
     {
         var books = new List<Book>();
+
         await using var connection = await OpenAsync();
-        await using var command = new NpgsqlCommand("SELECT id,title,description,genre,price FROM books ORDER BY id", connection);
+        await using var command = new NpgsqlCommand(
+            "SELECT id,title,description,genre,price FROM books ORDER BY id",
+            connection);
         await using var reader = await command.ExecuteReaderAsync();
+
         while (await reader.ReadAsync())
-            books.Add(new Book(reader.GetInt32(0), reader.GetString(1), reader.GetString(2),
-                reader.GetString(3), reader.IsDBNull(4) ? null : reader.GetDecimal(4)));
+        {
+            books.Add(new Book(
+                reader.GetInt32(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetString(3),
+                reader.IsDBNull(4) ? null : reader.GetDecimal(4)));
+        }
+
         return books;
     }
 }
