@@ -17,7 +17,6 @@ namespace Books.Microservice.Controllers;
 [Route("reports")]
 public sealed class ReportsController(BookDatabase database) : ControllerBase
 {
-    // Excel: список бесплатных книг.
     [HttpGet("free-books.xlsx")]
     public async Task<IActionResult> FreeBooksExcel()
     {
@@ -43,7 +42,6 @@ public sealed class ReportsController(BookDatabase database) : ControllerBase
             "free-books.xlsx");
     }
 
-    // PDF: круговая диаграмма бесплатных книг по жанрам.
     [HttpGet("free-by-genre.pdf")]
     public async Task<IActionResult> FreeByGenrePdf()
     {
@@ -88,7 +86,6 @@ public sealed class ReportsController(BookDatabase database) : ControllerBase
         return File(pdf, "application/pdf", "free-by-genre.pdf");
     }
 
-    // Word: таблица всех книг.
     [HttpGet("all-books.docx")]
     public async Task<IActionResult> AllBooksWord()
     {
@@ -146,7 +143,6 @@ public sealed class ReportsController(BookDatabase database) : ControllerBase
             "all-books.docx");
     }
 
-    // Excel: линейный график стоимости книг из ЛР3.
     [HttpGet("book-prices.xlsx")]
     public async Task<IActionResult> BookPricesExcel()
     {
